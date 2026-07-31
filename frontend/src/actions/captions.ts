@@ -126,7 +126,7 @@ export async function submitCaptionJob(
     if (message.includes("fetch failed") || message.includes("ECONNREFUSED")) {
       return {
         error:
-          "Python Flask Backend Server (http://localhost:8085) is unreachable. Please ensure the backend server is running.",
+          `Backend AI Engine (${env.BACKEND_URL}) is unreachable. Please ensure the Python Flask backend is running, or configure NEXT_PUBLIC_BACKEND_URL with your deployed backend URL.`,
       };
     }
     return { error: message };
