@@ -67,7 +67,7 @@ export function CaptionJobCard({ job }: CaptionJobCardProps) {
             {job.status === "completed" && job.backendJobId ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8085"}/api/thumbnail/${job.backendJobId}`}
+                src={`${process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8095"}/api/thumbnail/${job.backendJobId}`}
                 alt={`Thumbnail for ${job.originalFileName}`}
                 className="absolute inset-0 w-full h-full object-cover rounded-xl"
                 onError={(e) => {
