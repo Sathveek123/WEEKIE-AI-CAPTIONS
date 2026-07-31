@@ -1,0 +1,198 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-cream: #FFFBF5;
+  --color-cream-soft: #FFF8F0;
+  --color-cream-deep: #FCF3E7;
+  --color-ink: #1A1A2E;
+  --color-ink-soft: #2E2E42;
+  --color-coral: #FF5A1F;
+  --color-coral-light: #FF7A45;
+  --color-coral-soft: #FFE4D6;
+  --color-peach: #FFD9B8;
+  --color-butter: #FFD874;
+  --color-sage: #8FA98C;
+  --color-sky: #7FB8D9;
+
+  --color-background: var(--bg-primary);
+  --color-foreground: var(--text-primary);
+  
+  --font-display: "Clash Display", "General Sans", var(--font-outfit), sans-serif;
+  --font-body: "Satoshi", "Inter", var(--font-inter), sans-serif;
+
+  --radius-organic-sm: 14px;
+  --radius-organic-md: 20px;
+  --radius-organic-lg: 28px;
+
+  --shadow-warm: 0 20px 40px -12px rgba(255, 90, 31, 0.15);
+  --shadow-soft: 0 8px 24px -8px rgba(26, 26, 46, 0.08);
+  --shadow-lift: 0 24px 48px -16px rgba(26, 26, 46, 0.12);
+}
+
+:root {
+  --bg-primary: #FFFBF5;
+  --bg-secondary: #FFF8F0;
+  --bg-deep: #FCF3E7;
+  --text-primary: #1A1A2E;
+  --text-secondary: #4A4A5E;
+  --accent-primary: #FF5A1F;
+  --accent-hover: #E64A15;
+  --accent-soft: #FFE4D6;
+  --border-subtle: rgba(26, 26, 46, 0.08);
+  --shadow-warm: 0 20px 40px -12px rgba(255, 90, 31, 0.15);
+
+  --background: #FFFBF5;
+  --foreground: #1A1A2E;
+  --card: #FFFFFF;
+  --card-foreground: #1A1A2E;
+  --popover: #FFFFFF;
+  --popover-foreground: #1A1A2E;
+  --primary: #FF5A1F;
+  --primary-foreground: #FFFFFF;
+  --secondary: #FFF8F0;
+  --secondary-foreground: #E64A15;
+  --muted: #FFE4D6;
+  --muted-foreground: #4A4A5E;
+  --accent: #FF5A1F;
+  --accent-foreground: #FFFFFF;
+  --destructive: #EF4444;
+  --border: rgba(26, 26, 46, 0.08);
+  --input: rgba(26, 26, 46, 0.08);
+  --ring: #FF5A1F;
+  --radius: 20px;
+}
+
+@layer base {
+  * {
+    border-color: var(--border-subtle);
+  }
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+  }
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+  }
+}
+
+/* ============================================
+   Exact Spec Utilities
+   ============================================ */
+
+/* Primary Coral Pill Button */
+.btn-coral {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: #FF5A1F;
+  color: #FFFFFF;
+  font-weight: 700;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.85rem 1.85rem;
+  border-radius: 9999px;
+  border: 1px solid #FF5A1F;
+  box-shadow: 0 4px 16px rgba(255, 90, 31, 0.28);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+
+.btn-coral:hover {
+  background-color: #E64A15;
+  border-color: #E64A15;
+  color: #FFFFFF;
+  transform: scale(1.02);
+  box-shadow: var(--shadow-warm);
+}
+
+/* Secondary Ink Ghost Pill Button */
+.btn-coral-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: #FFFFFF;
+  color: #1A1A2E;
+  font-weight: 700;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.85rem 1.85rem;
+  border-radius: 9999px;
+  border: 1.5px solid rgba(26, 26, 46, 0.15);
+  box-shadow: 0 2px 8px rgba(26, 26, 46, 0.04);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+
+.btn-coral-ghost:hover {
+  background-color: #FFF8F0;
+  color: #FF5A1F;
+  border-color: #FF7A45;
+  transform: scale(1.02);
+  box-shadow: var(--shadow-soft);
+}
+
+/* Organic Warm Card Styling */
+.card-warm {
+  background-color: #FFFFFF;
+  border: 1px solid rgba(26, 26, 46, 0.08);
+  border-radius: 20px;
+  box-shadow: var(--shadow-soft);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card-warm:hover {
+  border-color: #FF7A45;
+  box-shadow: var(--shadow-lift);
+  transform: translateY(-4px);
+}
+
+/* Coral Badge Pill */
+.coral-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #FFE4D6;
+  border: 1px solid #FFD9B8;
+  color: #FF5A1F;
+  padding: 0.4rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Numeral Outline Styling */
+.numeral-outline {
+  font-family: var(--font-display);
+  font-weight: 900;
+  -webkit-text-stroke: 1.5px #FFD9B8;
+  color: #FFE4D6;
+}
+
+/* Animations */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
