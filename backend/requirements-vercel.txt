@@ -1,0 +1,20 @@
+# Vercel-compatible slim requirements (no FFmpeg binaries or Whisper ML models)
+# These fit within Vercel's 50MB serverless function size limit.
+#
+# NOTE: faster-whisper, pysubs2, deep-translator, and indic-transliteration
+# are NOT included here because they require FFmpeg and large ML model files
+# that exceed Vercel's function constraints.
+#
+# For full AI processing (Whisper + FFmpeg), deploy backend/ to:
+#   - Render.com (Docker)
+#   - Railway.app (Docker)
+#   - Fly.io (Docker)
+#   - Modal.com (GPU serverless)
+#
+# Use requirements.txt (full) for Docker / self-hosted deployments.
+
+flask==3.1.0
+flask-cors==5.0.1
+python-dotenv==1.1.0
+gunicorn==23.0.0
+requests==2.33.0
