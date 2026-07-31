@@ -12,6 +12,10 @@ const nextConfig: NextConfig = {
     },
   },
   images: {
+    // In Vercel multi-service deployments, /_next/image optimizer returns 404
+    // because service rewrites intercept the optimizer route.
+    // unoptimized: true serves images directly from /public — fixes all broken images.
+    unoptimized: true,
     // Allow Google profile picture CDN for real Google OAuth avatars
     remotePatterns: [
       {
