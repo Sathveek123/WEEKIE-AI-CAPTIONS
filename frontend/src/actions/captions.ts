@@ -133,6 +133,28 @@ export async function submitCaptionJob(
   }
 }
 
+export async function createClientJobRecord(data: {
+  originalFileName: string;
+  fileSize: number;
+  durationSeconds: number | null;
+  captionStyle: string;
+  captionPosition: number;
+  backendJobId: string;
+}): Promise<{ jobId: string }> {
+  const prismaRecord = await db.captionJob.create({
+    data: {
+      originalFileName: data.originalFileName,
+      fileSize: data.fileSize,
+      durationSeconds: data.durationSeconds,
+      captionStyle: data.captionStyle,
+      captionPosition: data.captionPosition,
+      status: "processing",
+      backendJobId: data.backendJobId,
+    },
+  });
+  return { jobId: prismaRecord.id };
+}
+
 export async function getCaptionJobStatus(
   jobId: string
 ): Promise<CaptionJob | null> {

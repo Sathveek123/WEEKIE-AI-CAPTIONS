@@ -8,7 +8,7 @@ import { VideoDropzone } from "~/components/video-dropzone";
 import { CaptionStylePicker } from "~/components/caption-style-picker";
 import { CaptionPreview } from "~/components/caption-preview";
 import { ProcessingView } from "~/components/processing-view";
-import { submitCaptionJob } from "~/actions/captions";
+import { submitCaptionJob, createClientJobRecord } from "~/actions/captions";
 import {
   CAPTION_STYLE_CONFIGS,
   DEFAULT_CAPTION_STYLE,
@@ -169,20 +169,54 @@ export default function StudioPage() {
       });
     }, 200);
 
-    const result = await submitCaptionJob(formData);
+    let createdJobId: string | null = null;
+    let submissionError: string | null = null;
+
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8095";
+      const response = await fetch(`${backendUrl}/api/process`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = (await response.json()) as { jobId: string };
+        const rec = await createClientJobRecord({
+          originalFileName: file.name,
+          fileSize: file.size,
+          durationSeconds: fileDuration || null,
+          captionStyle: selectedStyle,
+          captionPosition,
+          backendJobId: data.jobId,
+        });
+        createdJobId = rec.jobId;
+      } else {
+        const errText = await response.text();
+        submissionError = `Backend processing error (${response.status}): ${errText}`;
+      }
+    } catch {
+      // Fallback to server action
+      const fallbackResult = await submitCaptionJob(formData);
+      if ("error" in fallbackResult) {
+        submissionError = fallbackResult.error;
+      } else {
+        createdJobId = fallbackResult.jobId;
+      }
+    }
+
     clearInterval(progressInterval);
 
-    if ("error" in result) {
-      setError(result.error);
+    if (submissionError || !createdJobId) {
+      setError(submissionError ?? "Failed to initialize caption job.");
       setViewState("idle");
       setUploadProgress(null);
-      addLog(`[ERROR] Submission failed: ${result.error}`);
+      addLog(`[ERROR] Submission failed: ${submissionError}`);
       return;
     }
 
     addLog(`Upload completed. Spawning background Whisper transcription thread...`);
     setUploadProgress(100);
-    setJobId(result.jobId);
+    setJobId(createdJobId);
     setViewState("processing");
     setUploadProgress(null);
   };
