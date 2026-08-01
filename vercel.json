@@ -1,5 +1,4 @@
 {
-  "framework": "nextjs",
-  "buildCommand": "cd frontend && npm install && DATABASE_URL=\"file:./data/captions.db\" npx prisma generate && npm run build",
+  "buildCommand": "cd frontend && npm install && npx prisma generate && npm run build",
   "outputDirectory": "frontend/.next"
 }
