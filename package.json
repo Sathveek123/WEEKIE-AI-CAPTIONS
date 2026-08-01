@@ -16,5 +16,8 @@
     "lint": "cd frontend && npm run lint",
     "build": "cd frontend && npm run build",
     "clean": "rm -rf backend/data/temp/* backend/data/output/* frontend/.next"
+  },
+  "dependencies": {
+    "next": "^16.0.0"
   }
 }
