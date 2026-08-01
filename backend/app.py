@@ -73,10 +73,14 @@ def check_config_sync() -> tuple[bool, str]:
     if not frontend_config_path.exists():
         frontend_config_path = pathlib.Path(__file__).parent.parent / "frontend" / "src" / "shared" / "caption-styles.config.json"
 
-    if not backend_config_path.exists() or not frontend_config_path.exists():
-        msg = f"ERROR: Config file missing. Backend path: {backend_config_path.exists()}, Frontend path: {frontend_config_path.exists()}"
+    if not backend_config_path.exists():
+        msg = f"Config file missing: {backend_config_path}"
         logger.error(msg)
         return False, msg
+
+    if not frontend_config_path.exists():
+        logger.info("Standalone backend deployment detected (frontend config omitted). Skipping sync check.")
+        return True, "Standalone"
 
     try:
         with open(backend_config_path, "r", encoding="utf-8") as f:
