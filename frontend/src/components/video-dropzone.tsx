@@ -17,21 +17,30 @@ interface VideoDropzoneProps {
 }
 
 function getVideoDuration(file: File): Promise<number> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const video = document.createElement("video");
     video.preload = "metadata";
 
     const url = URL.createObjectURL(file);
     video.src = url;
 
-    video.onloadedmetadata = () => {
+    // Timeout fallback after 3 seconds if metadata doesn't fire
+    const timer = setTimeout(() => {
       URL.revokeObjectURL(url);
-      resolve(video.duration);
+      resolve(0);
+    }, 3000);
+
+    video.onloadedmetadata = () => {
+      clearTimeout(timer);
+      URL.revokeObjectURL(url);
+      resolve(video.duration || 0);
     };
 
     video.onerror = () => {
+      clearTimeout(timer);
       URL.revokeObjectURL(url);
-      reject(new Error("Failed to load video metadata"));
+      // Fall back gracefully to 0 — backend ffprobe will determine exact duration
+      resolve(0);
     };
   });
 }
