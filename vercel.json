@@ -4,5 +4,14 @@
       "root": "frontend",
       "framework": "nextjs"
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/:path*",
+      "destination": {
+        "type": "service",
+        "service": "frontend"
+      }
+    }
+  ]
 }
