@@ -287,11 +287,12 @@ export default function StudioPage() {
           </div>
         )}
 
-        {/* Processing State */}
-        {isProcessing && jobId ? (
+        {/* Processing & Uploading State — Live Kinetic Preview & Progress Overlay */}
+        {(isUploading || isProcessing) ? (
           <div className="card-white p-8 bg-white border border-[#FED7AA]">
             <ProcessingView
               jobId={jobId}
+              uploadProgress={uploadProgress}
               onComplete={handleProcessingComplete}
               onError={handleProcessingError}
             />

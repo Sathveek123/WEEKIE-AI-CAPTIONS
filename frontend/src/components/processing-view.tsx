@@ -6,7 +6,8 @@ import { getCaptionJobStatus } from "~/actions/captions";
 import type { CaptionJob, CaptionPhase } from "~/types/caption";
 
 interface ProcessingViewProps {
-  jobId: string;
+  jobId: string | null;
+  uploadProgress?: number | null;
   onComplete: (jobId: string) => void;
   onError: (error: string) => void;
 }
@@ -49,7 +50,7 @@ const MOCK_WORDS = [
 function getPhaseLabel(phase: CaptionPhase | null): string {
   switch (phase) {
     case "uploading":
-      return "Uploading Your Video...";
+      return "Uploading Your Video to AI Engine...";
     case "transcribing":
       return "Whisper AI Transcribing Speech...";
     case "burning":
@@ -57,19 +58,19 @@ function getPhaseLabel(phase: CaptionPhase | null): string {
     case "finalizing":
       return "Finalizing Full HD Video...";
     default:
-      return "AI Processing Your Video...";
+      return "Connecting to AI Engine (Waking up cloud server)...";
   }
 }
 
 function getPhaseIndex(phase: CaptionPhase | null): number {
-  if (!phase) return -1;
+  if (!phase) return 0;
   return PHASE_ORDER.indexOf(phase);
 }
 
-function getActiveTagline(progress: number): string {
-  if (progress <= 15) {
-    return "Initializing ingestion pipeline & extracting audio track...";
-  } else if (progress <= 40) {
+function getActiveTagline(progress: number, hasJobId: boolean): string {
+  if (!hasJobId || progress <= 10) {
+    return "Uploading media bytes & initializing AI transcription engine...";
+  } else if (progress <= 35) {
     return "Whisper AI: Running high-precision speech-to-text transcription...";
   } else if (progress <= 60) {
     return "Aligning word-level timestamps & matching script fallbacks...";
@@ -84,7 +85,7 @@ function getActiveTagline(progress: number): string {
   }
 }
 
-export function ProcessingView({ jobId, onComplete, onError }: ProcessingViewProps) {
+export function ProcessingView({ jobId, uploadProgress, onComplete, onError }: ProcessingViewProps) {
   const [job, setJob] = useState<CaptionJob | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [currentTipIndex, setCurrentTipIndex] = useState(0);
@@ -114,7 +115,10 @@ export function ProcessingView({ jobId, onComplete, onError }: ProcessingViewPro
   }, []);
 
   useEffect(() => {
+    if (!jobId) return;
+
     async function poll() {
+      if (!jobId) return;
       const result = await getCaptionJobStatus(jobId);
       if (!result) return;
       setJob(result);
@@ -129,17 +133,17 @@ export function ProcessingView({ jobId, onComplete, onError }: ProcessingViewPro
     }
 
     poll();
-    intervalRef.current = setInterval(poll, 3000);
+    intervalRef.current = setInterval(poll, 2500);
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [jobId, onComplete, onError]);
 
-  const currentPhase = job?.currentPhase ?? null;
-  const progress = job?.progress ?? 0;
+  const currentPhase: CaptionPhase = job?.currentPhase ?? "uploading";
+  const progress = job ? job.progress : (uploadProgress ?? 15);
   const currentPhaseIndex = getPhaseIndex(currentPhase);
-  const activeTagline = getActiveTagline(progress);
+  const activeTagline = getActiveTagline(progress, Boolean(jobId));
 
   if (job?.status === "failed") {
     return (
