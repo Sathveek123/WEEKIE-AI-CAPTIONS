@@ -7,7 +7,14 @@
   },
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/",
+      "destination": {
+        "type": "service",
+        "service": "frontend"
+      }
+    },
+    {
+      "source": "/:path*",
       "destination": {
         "type": "service",
         "service": "frontend"
