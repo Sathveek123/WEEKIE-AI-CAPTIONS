@@ -17,4 +17,4 @@ RUN mkdir -p data/temp data/output
 ENV PORT=8095
 EXPOSE 8095
 
-CMD sh -c "gunicorn --bind 0.0.0.0:${PORT:-8095} --timeout 600 --workers 2 'app:create_app()'"
+CMD sh -c "gunicorn --bind 0.0.0.0:${PORT:-8095} --timeout 600 --workers 1 --threads 4 'app:create_app()'"
