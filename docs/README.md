@@ -21,6 +21,7 @@ Welcome to the complete documentation for **Weekie AI Captions Generator**. This
 | [14_google_oauth_and_authentication.md](./14_google_oauth_and_authentication.md) | Real Google OAuth 2.0, GIS SDK, JWT Decoding & Route Protection |
 | [15_indic_and_telugu_caption_engine.md](./15_indic_and_telugu_caption_engine.md) | Indic & Telugu Word Wrapping, Noto Sans Fonts & YouTube Shorts Style |
 | [16_mobile_responsiveness_and_ui.md](./16_mobile_responsiveness_and_ui.md) | Mobile-First Responsive Breakpoints, Drawer Nav & Studio Layout |
+| [17_production_status_and_challenges.md](./17_production_status_and_challenges.md) | Production Deployments, Feature Overview & Deployment Limitations |
 
 ---
 

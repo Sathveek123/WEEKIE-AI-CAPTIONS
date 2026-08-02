@@ -71,6 +71,7 @@ The Python Flask backend (`backend/`) handles AI speech-to-text (Whisper) and FF
 | [14_google_oauth_and_authentication.md](./docs/14_google_oauth_and_authentication.md) | Real Google OAuth 2.0 & Route Guarding |
 | [15_indic_and_telugu_caption_engine.md](./docs/15_indic_and_telugu_caption_engine.md) | Indic & Telugu Word Wrapping & YouTube Shorts Typography |
 | [16_mobile_responsiveness_and_ui.md](./docs/16_mobile_responsiveness_and_ui.md) | Mobile Responsive Layout & UI System |
+| [17_production_status_and_challenges.md](./docs/17_production_status_and_challenges.md) | Production Deployments, Feature Overview & Deployment Limitations |
 
 ---
 
