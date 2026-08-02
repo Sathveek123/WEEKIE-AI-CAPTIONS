@@ -148,10 +148,10 @@ export default function StudioPage() {
       } catch {
         // Ignore check fail and retry
       }
-      logFn(`Waking up AI engine... (this may take 30 seconds on first use) [attempt ${i + 1}/${maxAttempts}]`);
+      logFn(`Waking up AI engine at ${url}... (this may take 30 seconds on first use) [attempt ${i + 1}/${maxAttempts}]`);
       await new Promise(r => setTimeout(r, 3000));
     }
-    throw new Error("Backend failed to wake up after 60 seconds. Please try again.");
+    throw new Error(`Backend failed to wake up after 60 seconds (tried pinging ${url}/api/health). Please verify NEXT_PUBLIC_BACKEND_URL and ensure you trigger a Vercel redeployment.`);
   };
 
   const handleSubmit = async () => {
