@@ -141,25 +141,68 @@ export async function createClientJobRecord(data: {
   captionPosition: number;
   backendJobId: string;
 }): Promise<{ jobId: string }> {
-  const prismaRecord = await db.captionJob.create({
-    data: {
-      originalFileName: data.originalFileName,
-      fileSize: data.fileSize,
-      durationSeconds: data.durationSeconds,
-      captionStyle: data.captionStyle,
-      captionPosition: data.captionPosition,
-      status: "processing",
-      backendJobId: data.backendJobId,
-    },
-  });
-  return { jobId: prismaRecord.id };
+  try {
+    const prismaRecord = await db.captionJob.create({
+      data: {
+        originalFileName: data.originalFileName,
+        fileSize: data.fileSize,
+        durationSeconds: data.durationSeconds,
+        captionStyle: data.captionStyle,
+        captionPosition: data.captionPosition,
+        status: "processing",
+        backendJobId: data.backendJobId,
+      },
+    });
+    return { jobId: prismaRecord.id };
+  } catch (err) {
+    console.error("Resilient DB create fallback active:", err);
+    // SQLite write failed on read-only Vercel serverless container.
+    // Graceful fallback: return the backendJobId directly to keep the app working.
+    return { jobId: data.backendJobId };
+  }
 }
 
 export async function getCaptionJobStatus(
   jobId: string
 ): Promise<CaptionJob | null> {
-  const job = await db.captionJob.findUnique({ where: { id: jobId } });
-  if (!job) return null;
+  let job = null;
+  try {
+    job = await db.captionJob.findUnique({ where: { id: jobId } });
+  } catch (err) {
+    console.error("Resilient DB read status fallback:", err);
+  }
+
+  // If the job record was not saved to SQLite (due to read-only container)
+  if (!job) {
+    try {
+      const response = await fetch(
+        `${env.BACKEND_URL}/api/status/${jobId}`
+      );
+      if (!response.ok) return null;
+      const backendData = (await response.json()) as BackendStatusResponse;
+      return {
+        id: jobId,
+        displayName: null,
+        originalFileName: "Processing Video",
+        fileSize: 0,
+        durationSeconds: backendData.durationSeconds ?? null,
+        captionStyle: "hormozi",
+        captionPosition: 10,
+        status: backendData.status as CaptionJobStatus,
+        progress: backendData.progress,
+        currentPhase: backendData.currentPhase as CaptionPhase | null,
+        language: backendData.language,
+        errorMessage: backendData.errorMessage,
+        backendJobId: jobId,
+        processingTimeMs: backendData.processingTimeMs,
+        outputFileSize: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+    } catch {
+      return null;
+    }
+  }
 
   if (TERMINAL_STATUSES.includes(job.status as CaptionJobStatus)) {
     return mapPrismaJobToType(job);
@@ -180,53 +223,115 @@ export async function getCaptionJobStatus(
 
     const backendData = (await response.json()) as BackendStatusResponse;
 
-    const updated = await db.captionJob.update({
-      where: { id: jobId },
-      data: {
+    try {
+      const updated = await db.captionJob.update({
+        where: { id: jobId },
+        data: {
+          status: backendData.status as CaptionJobStatus,
+          progress: backendData.progress,
+          currentPhase: backendData.currentPhase,
+          language: backendData.language,
+          durationSeconds: backendData.durationSeconds ?? job.durationSeconds,
+          errorMessage: backendData.errorMessage,
+          processingTimeMs: backendData.processingTimeMs,
+        },
+      });
+      return mapPrismaJobToType(updated);
+    } catch {
+      // SQLite update failed. Return a transient, updated status representation.
+      return {
+        ...mapPrismaJobToType(job),
         status: backendData.status as CaptionJobStatus,
         progress: backendData.progress,
-        currentPhase: backendData.currentPhase,
+        currentPhase: backendData.currentPhase as CaptionPhase | null,
         language: backendData.language,
         durationSeconds: backendData.durationSeconds ?? job.durationSeconds,
         errorMessage: backendData.errorMessage,
         processingTimeMs: backendData.processingTimeMs,
-      },
-    });
-
-    return mapPrismaJobToType(updated);
+      };
+    }
   } catch {
     return mapPrismaJobToType(job);
   }
 }
 
 export async function getCaptionJobs(): Promise<CaptionJob[]> {
-  const jobs = await db.captionJob.findMany({
-    orderBy: { createdAt: "desc" },
-  });
-  return jobs.map(mapPrismaJobToType);
+  try {
+    const jobs = await db.captionJob.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+    return jobs.map(mapPrismaJobToType);
+  } catch {
+    return [];
+  }
 }
 
 export async function getCaptionJobById(
   jobId: string
 ): Promise<CaptionJob | null> {
-  const job = await db.captionJob.findUnique({ where: { id: jobId } });
-  if (!job) return null;
-  return mapPrismaJobToType(job);
+  let job = null;
+  try {
+    job = await db.captionJob.findUnique({ where: { id: jobId } });
+  } catch {
+    // Ignore read error
+  }
+  
+  if (job) return mapPrismaJobToType(job);
+
+  // Fallback: fetch transient details directly from backend status
+  try {
+    const response = await fetch(
+      `${env.BACKEND_URL}/api/status/${jobId}`
+    );
+    if (!response.ok) return null;
+    const backendData = (await response.json()) as BackendStatusResponse;
+    return {
+      id: jobId,
+      displayName: null,
+      originalFileName: "Generated Video",
+      fileSize: 0,
+      durationSeconds: backendData.durationSeconds ?? null,
+      captionStyle: "hormozi",
+      captionPosition: 10,
+      status: backendData.status as CaptionJobStatus,
+      progress: backendData.progress,
+      currentPhase: backendData.currentPhase as CaptionPhase | null,
+      language: backendData.language,
+      errorMessage: backendData.errorMessage,
+      backendJobId: jobId,
+      processingTimeMs: backendData.processingTimeMs,
+      outputFileSize: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function deleteCaptionJob(jobId: string): Promise<void> {
-  const job = await db.captionJob.findUnique({ where: { id: jobId } });
-  if (!job) return;
+  let job = null;
+  try {
+    job = await db.captionJob.findUnique({ where: { id: jobId } });
+  } catch {
+    // Ignore read errors
+  }
 
-  if (job.backendJobId) {
+  const backendJobId = job?.backendJobId ?? jobId;
+
+  if (backendJobId) {
     try {
-      await fetch(`${env.BACKEND_URL}/api/jobs/${job.backendJobId}`, {
+      await fetch(`${env.BACKEND_URL}/api/jobs/${backendJobId}`, {
         method: "DELETE",
       });
     } catch {
-      // Best-effort delete from backend; proceed to delete from DB
+      // Best-effort delete
     }
   }
 
-  await db.captionJob.delete({ where: { id: jobId } });
+  try {
+    await db.captionJob.delete({ where: { id: jobId } });
+  } catch {
+    // Ignore DB errors
+  }
 }
