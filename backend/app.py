@@ -242,13 +242,7 @@ def create_app(testing: bool = False) -> Flask:
             except ValueError:
                 pass  # If unparseable, let it through — backend will determine during processing
 
-        # --- Read file content and check size ---
-        file_bytes = file.read()
-        file_size = len(file_bytes)
-        if file_size > max_file_size_bytes:
-            return jsonify({"error": f"File exceeds maximum size of {max_file_size_bytes // (1024*1024)} MB"}), 400
-
-        # --- Save file to temp location ---
+        # --- Save file directly to temp location (streams from request to disk to prevent RAM usage) ---
         upload_dir = os.path.join(data_dir, "temp")
         os.makedirs(upload_dir, exist_ok=True)
 
@@ -257,8 +251,16 @@ def create_app(testing: bool = False) -> Flask:
         saved_filename = f"{file_id}{ext}"
         video_path = os.path.join(upload_dir, saved_filename)
 
-        with open(video_path, "wb") as fh:
-            fh.write(file_bytes)
+        file.save(video_path)
+
+        # Check size on disk
+        file_size = os.path.getsize(video_path)
+        if file_size > max_file_size_bytes:
+            try:
+                os.remove(video_path)
+            except OSError:
+                pass
+            return jsonify({"error": f"File exceeds maximum size of {max_file_size_bytes // (1024*1024)} MB"}), 400
 
         # --- Extract Custom Transcription Settings & Styling Overrides ---
         language_source = request.form.get("languageSource", "auto")
