@@ -26,8 +26,12 @@ def get_model_size_for_language(language_code: str) -> str:
     env_override = os.environ.get("WHISPER_MODEL_SIZE", "auto")
     if env_override != "auto":
         return env_override  # respect explicit env override
+    is_render = os.environ.get("RENDER") == "true"
     if language_code in INDIC_LANGUAGES:
-        return "medium"  # Indic languages need medium minimum
+        # Render Free Tier has 512MB RAM constraint. Loading medium (1.5GB) or small (460MB)
+        # leads to OOM crash or disk swap thrashing (taking 56+ minutes).
+        # Fall back to base (140MB) on Render, otherwise use medium.
+        return "base" if is_render else "medium"
     return "base"  # English and other Latin languages
 
 
@@ -367,6 +371,14 @@ def transcribe_audio(
         effective_language = target_language
     else:
         effective_language = detected_lang
+
+    # Force garbage collection to free memory on constrained environments
+    if 'model' in locals():
+        del model
+    if 'pass1_model' in locals():
+        del pass1_model
+    import gc
+    gc.collect()
 
     return {
         "language": effective_language,
