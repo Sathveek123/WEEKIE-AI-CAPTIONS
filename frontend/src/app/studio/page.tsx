@@ -230,14 +230,9 @@ export default function StudioPage() {
         const errText = await response.text();
         submissionError = `Backend processing error (${response.status}): ${errText}`;
       }
-    } catch {
-      // Fallback to server action
-      const fallbackResult = await submitCaptionJob(formData);
-      if ("error" in fallbackResult) {
-        submissionError = fallbackResult.error;
-      } else {
-        createdJobId = fallbackResult.jobId;
-      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      submissionError = `Direct upload failed: ${msg}. Check console/network or ensure backend at ${backendUrl} is running and accepts CORS.`;
     }
 
     clearInterval(progressInterval);
