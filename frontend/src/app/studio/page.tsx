@@ -131,6 +131,29 @@ export default function StudioPage() {
     addLog(`Cleared source video file.`);
   };
 
+  const waitForBackend = async (url: string, logFn: (msg: string) => void): Promise<void> => {
+    const maxAttempts = 20; // 60 seconds total
+    for (let i = 0; i < maxAttempts; i++) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const res = await fetch(`${url}/api/health`, {
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+          logFn(`AI Engine is awake and active.`);
+          return;
+        }
+      } catch {
+        // Ignore check fail and retry
+      }
+      logFn(`Waking up AI engine... (this may take 30 seconds on first use) [attempt ${i + 1}/${maxAttempts}]`);
+      await new Promise(r => setTimeout(r, 3000));
+    }
+    throw new Error("Backend failed to wake up after 60 seconds. Please try again.");
+  };
+
   const handleSubmit = async () => {
     if (!file) return;
 
@@ -138,6 +161,19 @@ export default function StudioPage() {
     setUploadProgress(0);
     setError(null);
     addLog(`Initializing caption job request...`);
+
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8095";
+
+    try {
+      await waitForBackend(backendUrl, addLog);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg);
+      setViewState("idle");
+      setUploadProgress(null);
+      addLog(`[ERROR] Wake up failed: ${msg}`);
+      return;
+    }
 
     const formData = new FormData();
     formData.append("file", file);

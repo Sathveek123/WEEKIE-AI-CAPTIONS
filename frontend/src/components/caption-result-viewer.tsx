@@ -43,12 +43,34 @@ function formatDate(dateString: string): string {
 export function CaptionResultViewer({ job }: CaptionResultViewerProps) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [errorState, setErrorState] = useState<string | null>(null);
 
   const styleConfig = CAPTION_STYLE_CONFIGS[job.captionStyle];
   const backendBaseUrl = clientEnv.NEXT_PUBLIC_BACKEND_URL;
   const downloadUrl = job.backendJobId
     ? `${backendBaseUrl}/api/download/${job.backendJobId}`
     : null;
+
+  const handleDownload = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (!downloadUrl) return;
+    e.preventDefault();
+    try {
+      const res = await fetch(downloadUrl, { method: "HEAD" });
+      if (res.status === 410) {
+        setErrorState("Your video was processed but the file expired (free tier servers reset after inactivity). Please generate captions again — it will be faster since the AI model is already loaded.");
+        return;
+      }
+      // Trigger actual download via dynamic link
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.setAttribute("download", `captioned-${job.originalFileName}`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch {
+      window.location.href = downloadUrl;
+    }
+  };
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -123,6 +145,7 @@ export function CaptionResultViewer({ job }: CaptionResultViewerProps) {
               <a
                 href={downloadUrl}
                 download={`captioned-${job.originalFileName}`}
+                onClick={handleDownload}
                 className="btn-orange text-xs py-2 px-4 flex items-center gap-2"
               >
                 <Download className="h-4 w-4" />
@@ -174,11 +197,25 @@ export function CaptionResultViewer({ job }: CaptionResultViewerProps) {
           {/* Left: Video player */}
           <div className="lg:col-span-8">
             <div className="card-white p-4 bg-white border border-[#FED7AA]/60">
+              {errorState && (
+                <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs font-semibold text-amber-800">
+                  {errorState}
+                </div>
+              )}
               {downloadUrl ? (
                 <video
                   controls
                   className="w-full bg-black rounded-xl border border-[#E2E8F0]"
                   style={{ maxHeight: "70vh" }}
+                  onError={async () => {
+                    try {
+                      if (!downloadUrl) return;
+                      const res = await fetch(downloadUrl, { method: "HEAD" });
+                      if (res.status === 410) {
+                        setErrorState("Your video was processed but the file expired (free tier servers reset after inactivity). Please generate captions again — it will be faster since the AI model is already loaded.");
+                      }
+                    } catch {}
+                  }}
                 >
                   <source src={downloadUrl} />
                   Your browser does not support the video tag.

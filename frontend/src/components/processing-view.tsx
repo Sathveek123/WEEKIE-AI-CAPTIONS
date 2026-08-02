@@ -47,18 +47,39 @@ const MOCK_WORDS = [
   { word: "INSTANTLY!", color: "#22C55E", style: "bounce" },
 ];
 
-function getPhaseLabel(phase: CaptionPhase | null): string {
+function getPhaseLabel(
+  status: string | undefined,
+  phase: CaptionPhase | null,
+  progress: number,
+  hasJobId: boolean,
+  uploadProgress: number | null | undefined
+): string {
+  if (!hasJobId) {
+    if (uploadProgress === null || uploadProgress === undefined || uploadProgress === 0) {
+      return "Waking up AI engine...";
+    }
+    return "Uploading video...";
+  }
+
+  if (status === "completed") {
+    return "Done! Downloading...";
+  }
+  if (status === "failed") {
+    return "Error generating captions";
+  }
+
   switch (phase) {
     case "uploading":
-      return "Uploading Your Video to AI Engine...";
+      return "Uploading video...";
     case "transcribing":
-      return "Whisper AI Transcribing Speech...";
+      if (progress <= 15) return "Extracting audio...";
+      return "AI transcribing...";
     case "burning":
-      return "Burning Subtitles into Video...";
+      return "Generating captions...";
     case "finalizing":
-      return "Finalizing Full HD Video...";
+      return "Finalizing video...";
     default:
-      return "Connecting to AI Engine (Waking up cloud server)...";
+      return "Processing video...";
   }
 }
 
@@ -67,21 +88,40 @@ function getPhaseIndex(phase: CaptionPhase | null): number {
   return PHASE_ORDER.indexOf(phase);
 }
 
-function getActiveTagline(progress: number, hasJobId: boolean): string {
-  if (!hasJobId || progress <= 10) {
-    return "Uploading media bytes & initializing AI transcription engine...";
-  } else if (progress <= 35) {
-    return "Whisper AI: Running high-precision speech-to-text transcription...";
-  } else if (progress <= 60) {
-    return "Aligning word-level timestamps & matching script fallbacks...";
-  } else if (progress <= 80) {
-    return "Styling Engine: Mapping dynamic color presets & visual scales...";
-  } else if (progress <= 95) {
-    return "FFmpeg Engine: Burning styled ASS subtitle overlays into video track...";
-  } else if (progress < 100) {
-    return "Finalizing video tracks & preserving original audio bitrate...";
-  } else {
-    return "Captions generated successfully! Preparing download...";
+function getActiveTagline(
+  status: string | undefined,
+  phase: CaptionPhase | null,
+  progress: number,
+  hasJobId: boolean,
+  uploadProgress: number | null | undefined
+): string {
+  if (!hasJobId) {
+    if (uploadProgress === null || uploadProgress === undefined || uploadProgress === 0) {
+      return "Waking up AI engine... (this may take 30 seconds on first use)";
+    }
+    return `Uploading video... ${Math.round(progress)}% progress`;
+  }
+  if (status === "completed") {
+    return "Done! Downloading completed video...";
+  }
+  if (status === "failed") {
+    return "Processing failed. Please check error message below.";
+  }
+
+  switch (phase) {
+    case "uploading":
+      return "Uploading media bytes to AI engine...";
+    case "transcribing":
+      if (progress <= 15) {
+        return "Extracting audio track & pre-processing voice frequencies...";
+      }
+      return "AI transcribing: Running Whisper speech-to-text...";
+    case "burning":
+      return "Generating captions: Aligning style presets & rendering subtitles...";
+    case "finalizing":
+      return "Finalizing video: Burning ASS subtitles & saving output MP4...";
+    default:
+      return "Processing media...";
   }
 }
 
@@ -115,25 +155,50 @@ export function ProcessingView({ jobId, uploadProgress, onComplete, onError }: P
   }, []);
 
   useEffect(() => {
-    if (!jobId) return;
+    let retryCount = 0;
+    const startTime = Date.now();
 
     async function poll() {
       if (!jobId) return;
-      const result = await getCaptionJobStatus(jobId);
-      if (!result) return;
-      setJob(result);
 
-      if (result.status === "completed") {
+      // 10 minute timeout check (600 seconds)
+      const elapsedSeconds = (Date.now() - startTime) / 1000;
+      if (elapsedSeconds > 600) {
         if (intervalRef.current) clearInterval(intervalRef.current);
-        onComplete(jobId);
-      } else if (result.status === "failed") {
-        if (intervalRef.current) clearInterval(intervalRef.current);
-        onError(result.errorMessage ?? "Processing failed. Please try again.");
+        onError("Processing timed out after 10 minutes — please try again.");
+        return;
+      }
+
+      try {
+        const result = await getCaptionJobStatus(jobId);
+        if (!result) {
+          throw new Error("Empty status payload");
+        }
+        
+        // Reset retry count on successful fetch
+        retryCount = 0;
+        setJob(result);
+
+        if (result.status === "completed") {
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          onComplete(jobId);
+        } else if (result.status === "failed") {
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          onError(result.errorMessage ?? "Processing failed. Please try again.");
+        }
+      } catch (err) {
+        retryCount++;
+        if (retryCount >= 5) {
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          onError(`Connection failed: ${err instanceof Error ? err.message : String(err)}. Stopped polling after 5 retries.`);
+        }
       }
     }
 
-    poll();
-    intervalRef.current = setInterval(poll, 2500);
+    if (jobId) {
+      poll();
+      intervalRef.current = setInterval(poll, 2500);
+    }
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -143,7 +208,7 @@ export function ProcessingView({ jobId, uploadProgress, onComplete, onError }: P
   const currentPhase: CaptionPhase = job?.currentPhase ?? "uploading";
   const progress = job ? job.progress : (uploadProgress ?? 15);
   const currentPhaseIndex = getPhaseIndex(currentPhase);
-  const activeTagline = getActiveTagline(progress, Boolean(jobId));
+  const activeTagline = getActiveTagline(job?.status, currentPhase, progress, Boolean(jobId), uploadProgress);
 
   if (job?.status === "failed") {
     return (
@@ -247,7 +312,7 @@ export function ProcessingView({ jobId, uploadProgress, onComplete, onError }: P
             </div>
             <div>
               <p className="font-bold text-sm text-[#0F172A]">
-                {getPhaseLabel(currentPhase)}
+                {getPhaseLabel(job?.status, currentPhase, progress, Boolean(jobId), uploadProgress)}
               </p>
               <p className="text-[11px] text-[#64748B]">Weekie AI Engine pipeline active</p>
             </div>

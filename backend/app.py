@@ -166,10 +166,12 @@ def create_app(testing: bool = False) -> Flask:
         ttl_hours = int(os.environ.get("OUTPUT_TTL_HOURS", "24"))
         _schedule_cleanup(app, ttl_hours)
 
-    # ------------------------------------------------------------------
-    # CORS
-    # ------------------------------------------------------------------
-    CORS(app, origins=[frontend_url] if frontend_url != "*" else "*")
+    # Allow localhost and any vercel subdomains / custom vercel deployments
+    CORS(app, origins=[
+        r"https?://localhost(:\d+)?",
+        r"https?://.*\.vercel\.app",
+        r"https?://weekie-ai-captions-hr36\.vercel\.app"
+    ])
 
     # ------------------------------------------------------------------
     # Routes
@@ -336,7 +338,9 @@ def create_app(testing: bool = False) -> Flask:
             # Fallback: construct from convention
             output_path = os.path.join(data_dir, "output", job_id, "captioned.mp4")
         if not os.path.isfile(output_path):
-            return jsonify({"error": "Output file not found"}), 404
+            return jsonify({
+                "error": "Your video was processed but the file expired (free tier servers reset after inactivity). Please generate captions again — it will be faster since the AI model is already loaded."
+            }), 410
 
         return send_file(output_path, as_attachment=True)
 
