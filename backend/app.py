@@ -166,12 +166,8 @@ def create_app(testing: bool = False) -> Flask:
         ttl_hours = int(os.environ.get("OUTPUT_TTL_HOURS", "24"))
         _schedule_cleanup(app, ttl_hours)
 
-    # Allow localhost and any vercel subdomains / custom vercel deployments
-    CORS(app, origins=[
-        r"https?://localhost(:\d+)?",
-        r"https?://.*\.vercel\.app",
-        r"https?://weekie-ai-captions-hr36\.vercel\.app"
-    ])
+    # Allow all origins to prevent CORS errors on Vercel preview/production links and local dev
+    CORS(app, origins="*")
 
     # ------------------------------------------------------------------
     # Routes
