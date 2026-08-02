@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { CheckCircle, Loader2, Upload, Mic, Film, Download, Sparkles, Volume2 } from "lucide-react";
 import { getCaptionJobStatus } from "~/actions/captions";
-import type { CaptionJob, CaptionPhase } from "~/types/caption";
+import { clientEnv } from "~/lib/env";
+import type { CaptionJob, CaptionPhase, CaptionJobStatus, BackendStatusResponse } from "~/types/caption";
 
 interface ProcessingViewProps {
   jobId: string | null;
@@ -170,11 +171,40 @@ export function ProcessingView({ jobId, uploadProgress, onComplete, onError }: P
       }
 
       try {
-        const result = await getCaptionJobStatus(jobId);
-        if (!result) {
-          throw new Error("Empty status payload");
+        const backendBaseUrl = clientEnv.NEXT_PUBLIC_BACKEND_URL;
+        const response = await fetch(`${backendBaseUrl}/api/status/${jobId}`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch status (HTTP ${response.status})`);
         }
+        const backendData = (await response.json()) as BackendStatusResponse;
         
+        const result: CaptionJob = {
+          id: jobId,
+          displayName: null,
+          originalFileName: "Processing Video",
+          fileSize: 0,
+          durationSeconds: backendData.durationSeconds ?? null,
+          captionStyle: "hormozi",
+          captionPosition: 10,
+          status: backendData.status as CaptionJobStatus,
+          progress: backendData.progress,
+          currentPhase: backendData.currentPhase as CaptionPhase | null,
+          language: backendData.language,
+          errorMessage: backendData.errorMessage,
+          backendJobId: jobId,
+          processingTimeMs: backendData.processingTimeMs,
+          outputFileSize: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        // Sync to server action backend DB in the background as best effort
+        try {
+          void getCaptionJobStatus(jobId);
+        } catch {
+          // ignore
+        }
+
         // Reset retry count on successful fetch
         retryCount = 0;
         setJob(result);
