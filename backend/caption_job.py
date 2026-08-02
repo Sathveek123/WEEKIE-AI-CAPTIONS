@@ -573,8 +573,20 @@ def burn_subtitles_indic(
 
         margin_v = max(30, int(caption_position * 5.4))
 
+        from font_installer import ensure_fonts_available
+        from subtitle_utils import get_fallback_font
+
+        fonts_dir = ensure_fonts_available()
+        try:
+            rel_fonts_dir = os.path.relpath(fonts_dir, tmp_dir).replace("\\", "/")
+        except ValueError:
+            rel_fonts_dir = fonts_dir.replace("\\", "/").replace(":", "\\:")
+
+        language = transcript.get("language", "te")
+        font_name = get_fallback_font(language)
+
         style = (
-            f"Fontname=Nirmala UI,"
+            f"Fontname={font_name},"
             f"Fontsize={font_size},"
             f"PrimaryColour={primary_color_ass},"
             f"OutlineColour={outline_color_ass},"
@@ -582,10 +594,12 @@ def burn_subtitles_indic(
             f"Alignment=2,MarginV={margin_v},Bold={bold_val}"
         )
 
+        vf_filter = f"subtitles='subs.srt':fontsdir='{rel_fonts_dir}':force_style='{style}'"
+
         cmd = [
             "ffmpeg", "-y",
             "-i", os.path.abspath(video_path),
-            "-vf", f"subtitles='subs.srt':force_style='{style}'",
+            "-vf", vf_filter,
             "-c:a", "copy",
             "-c:v", "libx264",
             "-preset", "veryfast",

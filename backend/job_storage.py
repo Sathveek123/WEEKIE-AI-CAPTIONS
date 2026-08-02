@@ -93,7 +93,6 @@ class JobStorage:
     def get_job(self, job_id: str) -> Optional[dict]:
         """Return a copy of the job dict, or None if not found."""
         with self._lock:
-            self._load()
             job = self._jobs.get(job_id)
             return dict(job) if job is not None else None
 
@@ -115,7 +114,6 @@ class JobStorage:
         Returns True if the job was found and updated, False otherwise.
         """
         with self._lock:
-            self._load()
             job = self._jobs.get(job_id)
             if job is None:
                 return False
@@ -142,7 +140,6 @@ class JobStorage:
     def delete_job(self, job_id: str) -> bool:
         """Remove a job. Returns True if it existed, False otherwise."""
         with self._lock:
-            self._load()
             existed = self._jobs.pop(job_id, None) is not None
             if existed:
                 self._persist()
@@ -151,7 +148,6 @@ class JobStorage:
     def list_jobs(self) -> list[dict]:
         """Return all jobs as copies, sorted newest-first by created_at."""
         with self._lock:
-            self._load()
             jobs = [dict(j) for j in self._jobs.values()]
         jobs.sort(key=lambda j: j["created_at"], reverse=True)
         return jobs
@@ -159,7 +155,6 @@ class JobStorage:
     def active_job_count(self) -> int:
         """Count jobs whose status is 'pending' or 'processing'."""
         with self._lock:
-            self._load()
             return sum(
                 1 for j in self._jobs.values() if j["status"] in self.ACTIVE_STATUSES
             )
@@ -183,4 +178,4 @@ class JobStorage:
             if isinstance(data, dict):
                 self._jobs = data
         except (FileNotFoundError, json.JSONDecodeError):
-            self._jobs = {}
+            pass
