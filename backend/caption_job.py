@@ -115,6 +115,7 @@ def transcribe_audio(
 
     # --- PASS 1: Language Detection & Model Selection ---
     detected_lang = language
+    pass1_model = None
     if not language or language == "auto":
         logger.info("Pass 1: Running language detection on '%s' using base model...", audio_input)
         try:
@@ -133,14 +134,24 @@ def transcribe_audio(
     logger.info("Pass 2: Selected model size '%s' for language '%s'", target_model_size, detected_lang)
 
     # --- PASS 2: Full Transcription with Selected Model ---
-    try:
-        model = WhisperModel(target_model_size, device=whisper_device, compute_type=whisper_compute_type)
-    except Exception as exc:
-        if whisper_device != "cpu":
-            logger.warning("Pass 2 model init failed on '%s' (%s). Falling back to CPU.", whisper_device, exc)
-            model = WhisperModel(target_model_size, device="cpu", compute_type="int8")
-        else:
-            raise
+    model = None
+    if pass1_model is not None and target_model_size == "base":
+        logger.info("Reusing Pass 1 model for transcription...")
+        model = pass1_model
+    else:
+        # Free Pass 1 model memory before loading Pass 2 model
+        pass1_model = None
+        import gc
+        gc.collect()
+
+        try:
+            model = WhisperModel(target_model_size, device=whisper_device, compute_type=whisper_compute_type)
+        except Exception as exc:
+            if whisper_device != "cpu":
+                logger.warning("Pass 2 model init failed on '%s' (%s). Falling back to CPU.", whisper_device, exc)
+                model = WhisperModel(target_model_size, device="cpu", compute_type="int8")
+            else:
+                raise
 
     # Build comprehensive Whisper options
     transcribe_opts = {
