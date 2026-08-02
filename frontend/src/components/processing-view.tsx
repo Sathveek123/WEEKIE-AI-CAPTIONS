@@ -218,9 +218,10 @@ export function ProcessingView({ jobId, uploadProgress, onComplete, onError }: P
         }
       } catch (err) {
         retryCount++;
+        const backendBaseUrl = clientEnv.NEXT_PUBLIC_BACKEND_URL;
         if (retryCount >= 5) {
           if (intervalRef.current) clearInterval(intervalRef.current);
-          onError(`Connection failed: ${err instanceof Error ? err.message : String(err)}. Stopped polling after 5 retries.`);
+          onError(`Connection failed: ${err instanceof Error ? err.message : String(err)} (tried fetching ${backendBaseUrl}/api/status/${jobId}). Stopped polling after 5 retries.`);
         }
       }
     }
